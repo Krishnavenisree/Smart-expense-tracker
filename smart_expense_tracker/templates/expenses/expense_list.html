@@ -1,0 +1,75 @@
+{% extends "expenses/base.html" %}
+{% load expense_extras %}
+{% block title %}Expenses – SmartExpense{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 class="page-title">Expenses</h2>
+      <p class="page-sub">{{ count }} entr{{ count|pluralize:"y,ies" }} · Total: <span style="color:#f87171;font-weight:700;">₹{{ total|floatformat:0 }}</span></p>
+    </div>
+    <a href="{% url 'add_expense' %}" class="btn btn-primary">➕ Add Expense</a>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-success">✅ {{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Search + Filter -->
+  <form method="get" style="margin-bottom:20px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <input type="text" name="search" value="{{ search }}" class="form-control"
+             placeholder="🔍 Search expenses..." style="max-width:260px;">
+      <input type="hidden" name="filter" value="{{ filter }}">
+      <button type="submit" class="btn btn-secondary btn-sm" style="padding:10px 16px;">Search</button>
+    </div>
+  </form>
+
+  <div class="filter-pills">
+    <a href="?filter=all&search={{ search }}" class="pill {% if filter == 'all' %}active{% endif %}">All Time</a>
+    <a href="?filter=today&search={{ search }}" class="pill {% if filter == 'today' %}active{% endif %}">Today</a>
+    <a href="?filter=week&search={{ search }}" class="pill {% if filter == 'week' %}active{% endif %}">This Week</a>
+    <a href="?filter=month&search={{ search }}" class="pill {% if filter == 'month' %}active{% endif %}">This Month</a>
+  </div>
+
+  {% if expenses %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for e in expenses %}
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+          <div style="width:42px;height:42px;border-radius:12px;background:{{ category_colors|get_item:e.category }}25;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+            {{ category_icons|get_item:e.category }}
+          </div>
+          <div style="min-width:0;">
+            <p style="color:#f1f5f9;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ e.description }}</p>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:3px;">
+              <span style="color:#475569;font-size:12px;">{{ e.date }}</span>
+              <span class="badge" style="background:{{ category_colors|get_item:e.category }}20;color:{{ category_colors|get_item:e.category }};">{{ e.category }}</span>
+              {% if e.notes %}<span style="color:#475569;font-size:12px;">· {{ e.notes|truncatechars:40 }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span style="color:#f87171;font-weight:700;font-size:16px;">−₹{{ e.amount|floatformat:0 }}</span>
+          <a href="{% url 'edit_expense' e.pk %}" class="btn btn-edit btn-sm">✏️ Edit</a>
+          <form method="post" action="{% url 'delete_expense' e.pk %}" style="display:inline;"
+                onsubmit="return confirm('Delete this expense?')">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">🧾</div>
+      <p style="font-size:16px;margin-bottom:8px;">No expenses found</p>
+      <a href="{% url 'add_expense' %}" class="btn btn-primary" style="margin-top:12px;">Add Your First Expense</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

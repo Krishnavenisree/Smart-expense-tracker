@@ -1,0 +1,82 @@
+{% extends "expenses/base.html" %}
+{% block title %}Analytics – SmartExpense{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-header">
+    <h2 class="page-title">Analytics</h2>
+    <p class="page-sub">Visualize your spending patterns</p>
+  </div>
+
+  <div class="charts-grid">
+    <div class="card">
+      <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;margin-bottom:20px;">Category Breakdown</h3>
+      <canvas id="pieChart" height="230"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;margin-bottom:20px;">Daily Spending (Last 30 Days)</h3>
+      <canvas id="lineChart" height="230"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;margin-bottom:20px;">Category Totals</h3>
+    {% if cat_data %}
+      {% for item in cat_data %}
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="color:#94a3b8;font-size:14px;">{{ item.icon }} {{ item.category }}</span>
+          <span style="color:#f1f5f9;font-size:14px;font-weight:600;">
+            ₹{{ item.total|floatformat:0 }}
+            <span style="color:#64748b;font-weight:400;">({{ item.percent }}%)</span>
+          </span>
+        </div>
+        <div style="background:#0f172a;border-radius:4px;height:8px;">
+          <div style="height:8px;border-radius:4px;background:{{ item.color }};width:{{ item.percent }}%;transition:width .6s;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><div class="empty-icon">📊</div><p>No data yet. Add some expenses first!</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+Chart.defaults.color = '#64748b';
+const catData = {{ cat_data_json|safe }};
+const dailyData = {{ daily_data_json|safe }};
+
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: catData.map(d => d.category),
+    datasets: [{ data: catData.map(d => d.total), backgroundColor: catData.map(d => d.color), borderWidth: 2, borderColor: '#1e293b' }]
+  },
+  options: {
+    cutout: '55%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 12 } },
+      tooltip: { callbacks: { label: ctx => ctx.label + ': ₹' + ctx.raw.toLocaleString('en-IN') + ' (' + catData[ctx.dataIndex].percent + '%)' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('lineChart'), {
+  type: 'bar',
+  data: {
+    labels: dailyData.map(d => d.date),
+    datasets: [{ data: dailyData.map(d => d.total), backgroundColor: '#6366f1', borderRadius: 5 }]
+  },
+  options: {
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '₹' + ctx.raw.toLocaleString('en-IN') } } },
+    scales: {
+      x: { grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 10 } },
+      y: { grid: { color: '#1e293b' }, border: { display: false }, ticks: { callback: v => '₹' + v } }
+    }
+  }
+});
+</script>
+{% endblock %}

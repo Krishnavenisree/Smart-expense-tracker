@@ -1,0 +1,101 @@
+{% extends "expenses/base.html" %}
+{% block title %}{{ title }} – SmartExpense{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width:620px;">
+  <div class="page-header">
+    <h2 class="page-title">{{ title }}</h2>
+    <p class="page-sub">{% if expense %}Update the expense details below{% else %}Log a new expense with smart category detection{% endif %}</p>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-success">✅ {{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="form-card">
+    <form method="post" id="expenseForm">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" id="descInput"
+               class="form-control"
+               value="{{ form.description.value|default:'' }}"
+               placeholder="e.g. Swiggy dinner, Uber ride, Amazon order"
+               autocomplete="off">
+        <p class="predict-tag" id="predictTag" style="display:none;">
+          🤖 Predicted category: <strong id="predictedCat" style="color:#6366f1;"></strong>
+        </p>
+        {% if form.description.errors %}<p style="color:#f87171;font-size:12px;margin-top:4px;">{{ form.description.errors|join:", " }}</p>{% endif %}
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" name="amount" class="form-control" step="0.01" min="0"
+                 value="{{ form.amount.value|default:'' }}" placeholder="0.00">
+          {% if form.amount.errors %}<p style="color:#f87171;font-size:12px;margin-top:4px;">{{ form.amount.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control"
+                 value="{{ form.date.value|default:'' }}">
+          {% if form.date.errors %}<p style="color:#f87171;font-size:12px;margin-top:4px;">{{ form.date.errors|join:", " }}</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select name="category" id="categorySelect" class="form-control">
+          {% for val, label in form.fields.category.choices %}
+            <option value="{{ val }}" {% if form.category.value == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notes <span style="color:#475569;font-size:12px;">(optional)</span></label>
+        <textarea name="notes" class="form-control" rows="3"
+                  placeholder="Any additional details...">{{ form.notes.value|default:'' }}</textarea>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="submit" class="btn btn-primary" style="flex:1;">
+          {% if expense %}💾 Update Expense{% else %}➕ Add Expense{% endif %}
+        </button>
+        <a href="{% url 'expense_list' %}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Smart category prediction via AJAX
+const descInput = document.getElementById('descInput');
+const categorySelect = document.getElementById('categorySelect');
+const predictTag = document.getElementById('predictTag');
+const predictedCat = document.getElementById('predictedCat');
+
+let timeout;
+descInput.addEventListener('input', function () {
+  clearTimeout(timeout);
+  const val = this.value.trim();
+  if (val.length < 3) { predictTag.style.display = 'none'; return; }
+  timeout = setTimeout(() => {
+    fetch(`{% url 'add_expense' %}?desc=${encodeURIComponent(val)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.category) {
+          predictedCat.textContent = data.category;
+          predictTag.style.display = 'block';
+          categorySelect.value = data.category;
+        }
+      });
+  }, 400);
+});
+</script>
+{% endblock %}

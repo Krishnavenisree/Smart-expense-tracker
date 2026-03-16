@@ -1,0 +1,135 @@
+{% extends "expenses/base.html" %}
+{% load expense_extras %}
+{% block title %}Dashboard – SmartExpense{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h2 class="page-title">Dashboard</h2>
+      <p class="page-sub">Welcome back, {{ user.username }} 👋</p>
+    </div>
+    <a href="{% url 'add_expense' %}" class="btn btn-primary">➕ Add Expense</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <p class="stat-label">Total Expenses</p>
+          <p class="stat-value">₹{{ total|floatformat:0 }}</p>
+          <p class="stat-sub">{{ total_count }} entries</p>
+        </div>
+        <div class="stat-icon" style="background:rgba(99,102,241,.15);">💸</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <p class="stat-label">Today</p>
+          <p class="stat-value">₹{{ today_total|floatformat:0 }}</p>
+          <p class="stat-sub">{{ today_count }} transactions</p>
+        </div>
+        <div class="stat-icon" style="background:rgba(34,197,94,.15);">📅</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <p class="stat-label">This Week</p>
+          <p class="stat-value">₹{{ week_total|floatformat:0 }}</p>
+          <p class="stat-sub">{{ week_count }} transactions</p>
+        </div>
+        <div class="stat-icon" style="background:rgba(249,115,22,.15);">📆</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <p class="stat-label">This Month</p>
+          <p class="stat-value">₹{{ month_total|floatformat:0 }}</p>
+          <p class="stat-sub">{{ month_count }} transactions</p>
+        </div>
+        <div class="stat-icon" style="background:rgba(168,85,247,.15);">🗓️</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid" style="margin-bottom:28px;">
+    <div class="card">
+      <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;margin-bottom:20px;">Spending by Category</h3>
+      <canvas id="barChart" height="200"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;margin-bottom:20px;">Category Split</h3>
+      <canvas id="pieChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="color:#f1f5f9;font-size:16px;font-weight:600;">Recent Transactions</h3>
+      <a href="{% url 'expense_list' %}" style="color:#6366f1;font-size:13px;text-decoration:none;">View all →</a>
+    </div>
+    {% if recent %}
+      {% for e in recent %}
+      <div class="tx-row">
+        <div style="display:flex;align-items:center;gap:14px;flex:1;">
+          <div class="tx-icon" style="background: {{ category_colors|get_item:e.category }} 25%;">
+            {{ category_icons|get_item:e.category }}
+          </div>
+          <div>
+            <p class="tx-desc">{{ e.description }}</p>
+            <p class="tx-meta">{{ e.date }} · <span style="color:{{ category_colors|get_item:e.category }};">{{ e.category }}</span></p>
+          </div>
+        </div>
+        <span class="tx-amount">−₹{{ e.amount|floatformat:0 }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">🧾</div>
+        <p>No expenses yet. <a href="{% url 'add_expense' %}" style="color:#6366f1;">Add your first one!</a></p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const catData = {{ cat_data_json|safe }};
+const labels = catData.map(d => d.category);
+const values = catData.map(d => d.total);
+const colors = catData.map(d => d.color);
+
+Chart.defaults.color = '#64748b';
+
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
+  options: {
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '₹' + ctx.raw.toLocaleString('en-IN') } } },
+    scales: {
+      x: { grid: { display: false }, border: { display: false } },
+      y: { grid: { color: '#1e293b' }, border: { display: false }, ticks: { callback: v => '₹' + v } }
+    }
+  }
+});
+
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#1e293b' }] },
+  options: {
+    cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 12, font: { size: 12 } } },
+      tooltip: { callbacks: { label: ctx => ctx.label + ': ₹' + ctx.raw.toLocaleString('en-IN') } }
+    }
+  }
+});
+</script>
+{% endblock %}
